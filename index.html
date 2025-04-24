@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Redimensionador de Imágenes</title>
+  <title>Redimensionador Inteligente de Imágenes</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <style>
     body {
@@ -223,13 +223,21 @@
     </div>
 
     <div class="control-group">
-      <label for="width-slider">Tamaño máximo: Ancho <span id="width-value">100</span>px</label>
-      <input type="range" id="width-slider" min="10" max="1000" value="100">
+      <label for="width-slider">
+        Tamaño máximo: Ancho 
+        <input type="number" id="width-input" min="10" max="2000" value="100" style="width: 60px; margin: 0 5px;">
+        px
+      </label>
+      <input type="range" id="width-slider" min="10" max="2000" value="100">
     </div>
 
     <div class="control-group">
-      <label for="height-slider">Tamaño máximo: Alto <span id="height-value">100</span>px</label>
-      <input type="range" id="height-slider" min="10" max="1000" value="100">
+      <label for="width-slider">
+        Tamaño máximo: Alto 
+        <input type="number" id="height-input" min="10" max="2000" value="100" style="width: 60px; margin: 0 5px;">
+        px
+      </label>
+      <input type="range" id="height-slider" min="10" max="2000" value="100">
     </div>
 
     <div class="control-group">
@@ -301,7 +309,9 @@
     const widthSlider = document.getElementById('width-slider');
     const heightSlider = document.getElementById('height-slider');
     const widthValue = document.getElementById('width-value');
+    const widthInput = document.getElementById('width-input');
     const heightValue = document.getElementById('height-value');
+    const heightInput = document.getElementById('height-input');
     const maintainRatio = document.getElementById('maintain-ratio');
     const fillExact = document.getElementById('fill-exact');
     const downloadBtns = document.querySelectorAll('.download-btn');
@@ -311,7 +321,27 @@
     const originalDimensions = document.getElementById('original-dimensions');
     const previewCanvas = document.getElementById('preview-canvas');
     const previewDimensions = document.getElementById('preview-dimensions');
+ 
+    // Sincronizar input numérico con el slider
+    widthInput.addEventListener('input', function() {
+      const value = Math.min(Math.max(this.value, 10), 1000);
+      widthSlider.value = value;
+      this.value = value;
+    });
+    
+    widthSlider.addEventListener('input', function() {
+      widthInput.value = this.value;
+    });
 
+    heightInput.addEventListener('input', function() {
+      const value = Math.min(Math.max(this.value, 10), 1000);
+      heightSlider.value = value;
+      this.value = value;
+    });
+
+    heightSlider.addEventListener('input', function() {
+      heightInput.value = this.value;
+    });
     // Variables para mantener el estado
     let images = [];
     let currentPreviewIndex = 0;
