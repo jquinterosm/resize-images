@@ -304,8 +304,8 @@
     const heightValue = document.getElementById('height-value');
     const maintainRatio = document.getElementById('maintain-ratio');
     const fillExact = document.getElementById('fill-exact');
-    const downloadBtn = document.getElementById('download-btn');
-    const statusDiv = document.getElementById('status');
+    const downloadBtns = document.querySelectorAll('.download-btn');
+    const statusDivs = document.querySelectorAll('.status');
     const imageList = document.getElementById('image-list');
     const originalImg = document.getElementById('original-img');
     const originalDimensions = document.getElementById('original-dimensions');
@@ -383,7 +383,7 @@
             }
 
             // Habilitar botón de descarga
-            downloadBtn.disabled = false;
+            downloadBtns.forEach(btn => btn.disabled = false);
           };
         };
         reader.readAsDataURL(file);
@@ -468,7 +468,7 @@
           originalDimensions.textContent = '';
           previewCanvas.style.display = 'none';
           previewDimensions.textContent = '';
-          downloadBtn.disabled = true;
+          downloadBtns.forEach(btn => btn.disabled = true);
           fileInfo.textContent = 'No se han seleccionado archivos';
         } else {
           imageList.innerHTML = '';
@@ -574,7 +574,7 @@
     }
 
     // Evento para descargar todas las imágenes redimensionadas
-    downloadBtn.addEventListener('click', async function () {
+    downloadBtns.forEach(btn => btn.addEventListener('click', async function () {
       if (images.length === 0) {
         showStatus('Por favor, sube al menos una imagen.', 'processing');
         return;
@@ -612,13 +612,15 @@
       } catch (error) {
         showStatus('Error al procesar las imágenes: ' + error.message, 'processing');
       }
-    });
+    }));
 
     // Mostrar mensaje de estado
     function showStatus(message, type) {
-      statusDiv.textContent = message;
-      statusDiv.className = `status ${type}`;
-      statusDiv.style.display = 'block';
+      statusDivs.forEach(div => {
+        div.textContent = message;
+        div.className = `status ${type}`;
+        div.style.display = 'block';
+      });
     }
   </script>
 </body>
