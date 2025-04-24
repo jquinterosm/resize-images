@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Redimensionador Inteligente de Imágenes</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+
+    .container {
+      border: 1px solid #ddd;
+      padding: 20px;
+      border-radius: 5px;
+      background-color: #f9f9f9;
+    }
+
+    .control-group {
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+
+    input[type="range"] {
+      width: 100%;
+    }
+
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    .download-btn {
+      display: flex;
+      align-items: center;
+      justify-items: center;
+      gap: 10px;
+      background-color: #2196F3;
+    }
+
+    .download-btn:hover {
+      background-color: #0b7dda;
+    }
+
+
+    .download-btn:disabled {
+      background-color: #67a6d9;
+      cursor: not-allowed;
+    }
+
+    .status {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 4px;
+      display: none;
+    }
+
+    .processing {
+      background-color: #fff3cd;
+      color: #856404;
+    }
+
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+    }
+
+    .image-list {
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      padding: 10px;
+      margin-top: 10px;
+    }
+
+    .image-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 0;
+      border-bottom: 1px solid #eee;
+      align-items: center;
+    }
+
+    .image-item:last-child {
+      border-bottom: none;
+    }
+
+    .remove-btn {
+      background-color: #f44336;
+      padding: 2px 8px;
+      font-size: 12px;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+
+    .remove-btn:hover {
+      background-color: #d32f2f;
+    }
+
+    .preview-container {
+      margin-top: 20px;
+      display: flex;
+      gap: 20px;
+    }
+
+    .preview-box {
+      flex: 1;
+      border: 1px dashed #ccc;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .preview-img {
+      max-width: 100%;
+      max-height: 200px;
+      object-fit: contain;
+    }
+
+    .dimension-info {
+      font-size: 14px;
+      color: #666;
+      margin-top: 5px;
+    }
+
+    /* Nuevos estilos para el área de subida */
+    .upload-area {
+      border: 2px dashed #ccc;
+      border-radius: 8px;
+      padding: 30px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-bottom: 15px;
+      background-color: #f8f9fa;
+      position: relative;
+      min-height: 120px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .upload-area:hover {
+      border-color: #2196F3;
+      background-color: #f0f7ff;
+    }
+
+    .upload-area.dragover {
+      border-color: #4CAF50;
+      background-color: #e8f5e9;
+    }
+
+    .upload-icon {
+      font-size: 48px;
+      color: #2196F3;
+      margin-bottom: 10px;
+    }
+
+    .upload-text {
+      font-size: 16px;
+      color: #555;
+    }
+
+    .upload-text strong {
+      color: #2196F3;
+    }
+
+    .file-input {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .file-info {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #666;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Redimensionar imágenes</h1>
+
+    <div class="control-group">
+      <label>Sube tus imágenes:</label>
+      <div class="upload-area" id="upload-area">
+        <div class="upload-icon">⬆️</div>
+        <div class="upload-text">
+          <strong>Haz clic para seleccionar</strong> o arrastra y suelta tus imágenes aquí
+        </div>
+        <div class="file-info" id="file-info">No se han seleccionado archivos</div>
+        <input type="file" id="image-upload" class="file-input" accept="image/*" multiple>
+      </div>
+    </div>
+
+    <div class="control-group">
+      <label for="width-slider">Tamaño máximo: Ancho <span id="width-value">100</span>px</label>
+      <input type="range" id="width-slider" min="10" max="1000" value="100">
+    </div>
+
+    <div class="control-group">
+      <label for="height-slider">Tamaño máximo: Alto <span id="height-value">100</span>px</label>
+      <input type="range" id="height-slider" min="10" max="1000" value="100">
+    </div>
+
+    <div class="control-group">
+      <label>
+        <input type="checkbox" id="maintain-ratio" checked>
+        Mantener proporciones originales (recomendado)
+      </label>
+    </div>
+
+    <div class="control-group">
+      <label>
+        <input type="checkbox" id="fill-exact">
+        Rellenar con fondo blanco si no coincide la proporción
+      </label>
+    </div>
+
+    <button id="download-btn" class="download-btn" disabled>
+      Descargar ZIP
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+        class="icon icon-tabler icons-tabler-outline icon-tabler-download">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+        <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2" />
+        <path d="M7 11l5 5l5 -5" />
+        <path d="M12 4l0 12" />
+      </svg>
+    </button>
+
+    <div id="status" class="status"></div>
+
+    <h3>Imágenes seleccionadas</h3>
+    <div class="image-list" id="image-list">
+      <p style="text-align: center; color: #666;">No hay imágenes seleccionadas</p>
+    </div>
+
+    <div class="preview-container">
+      <div class="preview-box">
+        <h3>Vista previa original</h3>
+        <img id="original-img" class="preview-img" src="" alt="Vista previa" style="display: none;">
+        <p id="original-dimensions" class="dimension-info"></p>
+      </div>
+      <div class="preview-box">
+        <h3>Como quedará</h3>
+        <canvas id="preview-canvas" class="preview-img" style="display: none;"></canvas>
+        <p id="preview-dimensions" class="dimension-info"></p>
+      </div>
+    </div>
+
+    <button id="download-btn" class="download-btn" disabled>
+      Descargar ZIP
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+        class="icon icon-tabler icons-tabler-outline icon-tabler-download">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+        <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2" />
+        <path d="M7 11l5 5l5 -5" />
+        <path d="M12 4l0 12" />
+      </svg>
+    </button>
+
+    <div id="status" class="status"></div>
+  </div>
+
+  <script>
+    // Elementos del DOM
+    const imageUpload = document.getElementById('image-upload');
+    const uploadArea = document.getElementById('upload-area');
+    const fileInfo = document.getElementById('file-info');
+    const widthSlider = document.getElementById('width-slider');
+    const heightSlider = document.getElementById('height-slider');
+    const widthValue = document.getElementById('width-value');
+    const heightValue = document.getElementById('height-value');
+    const maintainRatio = document.getElementById('maintain-ratio');
+    const fillExact = document.getElementById('fill-exact');
+    const downloadBtn = document.getElementById('download-btn');
+    const statusDiv = document.getElementById('status');
+    const imageList = document.getElementById('image-list');
+    const originalImg = document.getElementById('original-img');
+    const originalDimensions = document.getElementById('original-dimensions');
+    const previewCanvas = document.getElementById('preview-canvas');
+    const previewDimensions = document.getElementById('preview-dimensions');
+
+    // Variables para mantener el estado
+    let images = [];
+    let currentPreviewIndex = 0;
+
+    // Eventos para el área de subida
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('dragover');
+      if (e.dataTransfer.files.length) {
+        imageUpload.files = e.dataTransfer.files;
+        handleFileSelection();
+      }
+    });
+
+    imageUpload.addEventListener('change', handleFileSelection);
+
+    function handleFileSelection() {
+      const files = Array.from(imageUpload.files);
+      if (files.length === 0) return;
+
+      // Actualizar información de archivos
+      if (files.length === 1) {
+        fileInfo.textContent = `1 archivo seleccionado: ${files[0].name}`;
+      } else {
+        fileInfo.textContent = `${files.length} archivos seleccionados`;
+      }
+
+      images = [];
+      imageList.innerHTML = '';
+
+      files.forEach((file, index) => {
+        const reader = new FileReader();
+        reader.onload = function (event) {
+          const img = new Image();
+          img.src = event.target.result;
+          img.onload = function () {
+            const imageData = {
+              file: file,
+              src: event.target.result,
+              name: file.name,
+              width: img.naturalWidth,
+              height: img.naturalHeight,
+              index: index
+            };
+            images.push(imageData);
+
+            // Mostrar en la lista
+            const imageItem = document.createElement('div');
+            imageItem.className = 'image-item';
+            imageItem.innerHTML = `
+                            <span>${file.name} (${img.naturalWidth}×${img.naturalHeight})</span>
+                            <button class="remove-btn" data-index="${index}">Eliminar</button>
+                        `;
+            imageList.appendChild(imageItem);
+
+            // Mostrar la primera imagen como vista previa
+            if (index === 0) {
+              currentPreviewIndex = 0;
+              updatePreviews(imageData);
+            }
+
+            // Habilitar botón de descarga
+            downloadBtn.disabled = false;
+          };
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Resto del código JavaScript permanece igual...
+    // [Aquí iría el resto del código JavaScript de la versión anterior]
+    // Solo se ha modificado la parte del manejo de archivos
+
+    // Actualizar vistas previas
+    function updatePreviews(imageData) {
+      // Vista previa original
+      originalImg.src = imageData.src;
+      originalImg.style.display = 'block';
+      originalDimensions.textContent = `Original: ${imageData.width} × ${imageData.height} px`;
+
+      // Vista previa del resultado
+      updateResultPreview(imageData);
+    }
+
+    // Actualizar vista previa del resultado
+    function updateResultPreview(imageData) {
+      const maxWidth = parseInt(widthSlider.value);
+      const maxHeight = parseInt(heightSlider.value);
+      const useFill = fillExact.checked;
+
+      // Calcular nuevas dimensiones manteniendo la proporción
+      let newWidth, newHeight;
+      const ratio = imageData.width / imageData.height;
+
+      if (maintainRatio.checked) {
+        // Calcular el tamaño que encaja dentro del máximo manteniendo la proporción
+        const widthRatio = maxWidth / imageData.width;
+        const heightRatio = maxHeight / imageData.height;
+        const scale = Math.min(widthRatio, heightRatio);
+
+        newWidth = Math.round(imageData.width * scale);
+        newHeight = Math.round(imageData.height * scale);
+      } else {
+        // Forzar el tamaño exacto (puede deformar la imagen)
+        newWidth = maxWidth;
+        newHeight = maxHeight;
+      }
+
+      // Configurar canvas
+      previewCanvas.width = useFill ? maxWidth : newWidth;
+      previewCanvas.height = useFill ? maxHeight : newHeight;
+      previewCanvas.style.display = 'block';
+
+      const ctx = previewCanvas.getContext('2d');
+
+      // Rellenar fondo blanco si es necesario
+      if (useFill) {
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
+      }
+
+      // Calcular posición centrada si usamos fill
+      const x = useFill ? (maxWidth - newWidth) / 2 : 0;
+      const y = useFill ? (maxHeight - newHeight) / 2 : 0;
+
+      // Dibujar imagen redimensionada
+      ctx.drawImage(originalImg, x, y, newWidth, newHeight);
+
+      // Mostrar dimensiones resultantes
+      const resultWidth = useFill ? maxWidth : newWidth;
+      const resultHeight = useFill ? maxHeight : newHeight;
+      previewDimensions.textContent = `Resultado: ${resultWidth} × ${resultHeight} px`;
+    }
+
+    // Evento para eliminar imágenes de la lista
+    imageList.addEventListener('click', function (e) {
+      if (e.target.classList.contains('remove-btn')) {
+        const indexToRemove = parseInt(e.target.getAttribute('data-index'));
+        images = images.filter(img => img.index !== indexToRemove);
+
+        // Actualizar la lista
+        if (images.length === 0) {
+          imageList.innerHTML = '<p style="text-align: center; color: #666;">No hay imágenes seleccionadas</p>';
+          originalImg.style.display = 'none';
+          originalDimensions.textContent = '';
+          previewCanvas.style.display = 'none';
+          previewDimensions.textContent = '';
+          downloadBtn.disabled = true;
+          fileInfo.textContent = 'No se han seleccionado archivos';
+        } else {
+          imageList.innerHTML = '';
+          images.forEach((img, i) => {
+            img.index = i; // Reindexar
+            const imageItem = document.createElement('div');
+            imageItem.className = 'image-item';
+            imageItem.innerHTML = `
+                            <span>${img.name} (${img.width}×${img.height})</span>
+                            <button class="remove-btn" data-index="${i}">Eliminar</button>
+                        `;
+            imageList.appendChild(imageItem);
+
+            // Actualizar vista previa si era la que se estaba mostrando
+            if (i === currentPreviewIndex || (currentPreviewIndex >= images.length && i === 0)) {
+              currentPreviewIndex = i;
+              updatePreviews(img);
+            }
+          });
+
+          // Actualizar información de archivos
+          if (images.length === 1) {
+            fileInfo.textContent = `1 archivo seleccionado: ${images[0].name}`;
+          } else {
+            fileInfo.textContent = `${images.length} archivos seleccionados`;
+          }
+        }
+      }
+    });
+
+    // Eventos para los sliders y controles
+    [widthSlider, heightSlider, maintainRatio, fillExact].forEach(control => {
+      control.addEventListener('input', function () {
+        if (images.length > 0) {
+          updateResultPreview(images[currentPreviewIndex]);
+        }
+
+        // Actualizar valores mostrados
+        widthValue.textContent = widthSlider.value;
+        heightValue.textContent = heightSlider.value;
+      });
+    });
+
+    // Función para redimensionar una imagen
+    function resizeImage(imageData) {
+      return new Promise((resolve) => {
+        const maxWidth = parseInt(widthSlider.value);
+        const maxHeight = parseInt(heightSlider.value);
+        const useFill = fillExact.checked;
+
+        const img = new Image();
+        img.src = imageData.src;
+        img.onload = function () {
+          // Calcular nuevas dimensiones manteniendo la proporción
+          let newWidth, newHeight;
+          const ratio = img.naturalWidth / img.naturalHeight;
+
+          if (maintainRatio.checked) {
+            const widthRatio = maxWidth / img.naturalWidth;
+            const heightRatio = maxHeight / img.naturalHeight;
+            const scale = Math.min(widthRatio, heightRatio);
+
+            newWidth = Math.round(img.naturalWidth * scale);
+            newHeight = Math.round(img.naturalHeight * scale);
+          } else {
+            newWidth = maxWidth;
+            newHeight = maxHeight;
+          }
+
+          // Crear canvas
+          const canvas = document.createElement('canvas');
+          canvas.width = useFill ? maxWidth : newWidth;
+          canvas.height = useFill ? maxHeight : newHeight;
+
+          const ctx = canvas.getContext('2d');
+
+          // Rellenar fondo blanco si es necesario
+          if (useFill) {
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+          }
+
+          // Calcular posición centrada si usamos fill
+          const x = useFill ? (maxWidth - newWidth) / 2 : 0;
+          const y = useFill ? (maxHeight - newHeight) / 2 : 0;
+
+          // Dibujar imagen redimensionada
+          ctx.drawImage(img, x, y, newWidth, newHeight);
+
+          const resizedData = {
+            name: imageData.name.replace(/\.[^/.]+$/, "") +
+              `_${useFill ? maxWidth : newWidth}x${useFill ? maxHeight : newHeight}.png`,
+            blob: null
+          };
+
+          // Convertir canvas a Blob
+          canvas.toBlob((blob) => {
+            resizedData.blob = blob;
+            resolve(resizedData);
+          }, 'image/png');
+        };
+      });
+    }
+
+    // Evento para descargar todas las imágenes redimensionadas
+    downloadBtn.addEventListener('click', async function () {
+      if (images.length === 0) {
+        showStatus('Por favor, sube al menos una imagen.', 'processing');
+        return;
+      }
+
+      showStatus(`Procesando ${images.length} imágenes...`, 'processing');
+
+      const zip = new JSZip();
+      const maxWidth = parseInt(widthSlider.value);
+      const maxHeight = parseInt(heightSlider.value);
+
+      try {
+        // Procesar todas las imágenes
+        for (let i = 0; i < images.length; i++) {
+          showStatus(`Procesando ${i + 1} de ${images.length}: ${images[i].name}`, 'processing');
+          const resizedData = await resizeImage(images[i]);
+          zip.file(resizedData.name, resizedData.blob);
+        }
+
+        // Generar el ZIP
+        showStatus('Generando archivo ZIP...', 'processing');
+        const content = await zip.generateAsync({ type: "blob" });
+
+        // Descargar el ZIP
+        const url = URL.createObjectURL(content);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `imagenes_redimensionadas_${maxWidth}x${maxHeight}.zip`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        showStatus(`¡Descarga completada! ${images.length} imágenes procesadas.`, 'success');
+      } catch (error) {
+        showStatus('Error al procesar las imágenes: ' + error.message, 'processing');
+      }
+    });
+
+    // Mostrar mensaje de estado
+    function showStatus(message, type) {
+      statusDiv.textContent = message;
+      statusDiv.className = `status ${type}`;
+      statusDiv.style.display = 'block';
+    }
+  </script>
+</body>
+
+</html>
